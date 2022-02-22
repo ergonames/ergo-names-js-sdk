@@ -5,6 +5,7 @@ A simple SDK for resolving [Ergo Names](https://ergonames.com).
 ## Installation
 
 **To install the library:**
+
 A published package will be available once Ergo Names is released on mainnet.
 
 ```
