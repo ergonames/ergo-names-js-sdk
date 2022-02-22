@@ -2,9 +2,9 @@
 
 A simple SDK for resolving [Ergo Names](https://ergonames.com).
 
-### Installation
+## Installation
 
-To install the library:
+**To install the library:**
 
 ```
 npm install https://github.com/ergonames/ergo-names-js
@@ -12,13 +12,13 @@ npm install https://github.com/ergonames/ergo-names-js
 
 A published package will be available once Ergo Names is released on mainnet.
 
-To import the functions:
+**To import the functions:**
 
 ```js
 import { check_name_exists, lookup_owner_address } from "ergo-names-js";
 ```
 
-### Documentation
+## Documentation
 
 Checking if address exists
 
