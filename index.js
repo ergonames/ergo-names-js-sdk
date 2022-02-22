@@ -23,7 +23,10 @@ async function lookup_owner_address(name) {
     return address;
 }
 
-
-
-let address = await lookup_owner_address("bob.ergo");
-console.log(address);
+async function check_name_exists(name) {
+    let address = await lookup_owner_address(name);
+    if (address == null) {
+        return false;
+    }
+    return true;
+}
