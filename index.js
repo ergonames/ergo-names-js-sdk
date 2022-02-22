@@ -16,14 +16,14 @@ async function resolve_response(url) {
         })
 }
 
-async function lookup_owner_address(name) {
+export async function lookup_owner_address(name) {
     let url = create_url(name);
     let response = await resolve_response(url);
     let address = response['ergo'];
     return address;
 }
 
-async function check_name_exists(name) {
+export async function check_name_exists(name) {
     let address = await lookup_owner_address(name);
     if (address == null) {
         return false;
