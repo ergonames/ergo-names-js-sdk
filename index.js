@@ -3,135 +3,86 @@ import fetch from "node-fetch";
 const EXPLORER_API_URL = "https://api-testnet.ergoplatform.com/";
 const MINT_ADDRESS = "3WwKzFjZGrtKAV7qSCoJsZK9iJhLLrUa3uwd4yw52bVtDVv6j5TL";
 
-class Transaction {
-    constructor(id, inclusionHeight, outputs) {
+let API_CALLS = 0;
+
+class Token {
+    constructor(id, boxId, emmissionAmount, name, description, type, decimals) {
         this.id = id;
-        this.inclusionHeight = inclusionHeight;
-        this.outputs = outputs;
-    }
-}
-
-class Output {
-    constructor(assets) {
-        this.assets = assets;
-    }
-}
-
-class Asset {
-    constructor(tokenId, name) {
-        this.tokenId = tokenId;
+        this.boxId = boxId;
+        this.emmissionAmount = emmissionAmount;
         this.name = name;
+        this.description = description;
+        this.type = type;
+        this.decimals = decimals;
     }
 }
 
-async function get_total_transactions_of_mint_address() {
-    let url = EXPLORER_API_URL + "api/v1/addresses/" + MINT_ADDRESS + "/transactions?limit=1";
+async function get_token_data(tokenName) {
+    let url = EXPLORER_API_URL + "api/v1/tokens/search?query=" + tokenName;
+    API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
-        .then(data => { return data['total'] });
+        .then(data => { return data['items']} )
 }
 
-async function get_raw_transaction_data(offset) {
-    let url = EXPLORER_API_URL + "api/v1/addresses/" + MINT_ADDRESS + "/transactions?limit=500&offset=" + offset;
+async function convert_token_data_to_token(data) {
+    let tokenArray = []
+    for (let i=0; i<Object.keys(data).length; i++) {
+        let tk = new Token(data[i]['id'], data[i]['boxId'], data[i]['emmissionAmount'], data[i]['name'], data[i]['description'], data[i]['type'], data[i]['decimals']);
+        tokenArray.push(tk);
+    }
+    return tokenArray;
+}
+
+async function get_box_address(boxId) {
+    let url = EXPLORER_API_URL + "api/v1/boxes/" + boxId;
+    API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
-        .then(data => { return data['items'] });
+        .then(data => { return data['address']} )
 }
 
-async function create_small_transaction_array(offset) {
-    let transactionData = await get_raw_transaction_data(offset);
-    let transactionArray = [];
-    let transactionCount = Object.keys(transactionData).length;
-    for (let i=0; i<transactionCount; i++) {
-        let id = transactionData[i].id;
-        let inclusionHeight = transactionData[i].inclusionHeight;
-        let outputs = transactionData[i].outputs;
-        let tx = new Transaction(id, inclusionHeight, outputs);
-        transactionArray.push(tx);
+async function check_box_address(address) {
+    if (address == MINT_ADDRESS) {
+        return true;
     }
-    return transactionArray;
+    return false;
 }
 
-async function create_complete_transaction_array() {
-    let total = await get_total_transactions_of_mint_address();
-    let neededCalls = Math.floor(total / 500) + 1;
-    let offset = 0;
-    let transactionArray = [];
-    for (let i=0; i<neededCalls; i++) {
-        let smallArray = await create_small_transaction_array(offset);
-        transactionArray = transactionArray.concat(smallArray);
-        offset += 500;
-    }
-    return transactionArray;
-}
-
-async function update_transaction_array(transactionArray) {
-    for (let i=0; i<transactionArray.length; i++) {
-        let assets = transactionArray[i].outputs[0]['assets'];
-        let opt = new Output(assets);
-        transactionArray[i].outputs = opt;
-        for (let j=0; i<transactionArray[i].outputs.assets; j++) {
-            let tokenId = transactionArray[i].outputs.assets[j]['tokenId'];
-            let name = transactionArray[i].outputs.assets[j]['name'];
-            let asset = new Asset(tokenId, name);
-            transactionArray[i].outputs.assets[j] = asset;
+async function get_asset_minted_at_address(tokenArray) {
+    for (let i=0; i<tokenArray.length; i++) {
+        let address = await get_box_address(tokenArray[i].boxId);
+        if (await check_box_address(address)) {
+            return tokenArray[i].id;
         }
     }
-    return transactionArray;
+    return null;
 }
 
-async function get_asset_id(transactionArray, name) {
-    let exists = false;
-    let id = "";
-    for (let i=0; i<transactionArray.length; i++) {
-        for (let j=0; j<transactionArray[i].outputs.assets.length; j++) {
-            if (name == transactionArray[i].outputs.assets[j].name) {
-                exists = true;
-                id = transactionArray[i].outputs.assets[j].tokenId;
-                break;
-            }
-        }
-    }
-    if (exists) {
-        return id;
-    } else {
-        return null;
-    }
+async function get_token_transaction_data(tokenId) {
+    let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId;
+    API_CALLS++;
+    return await fetch(url)
+        .then(res => res.json())
+        .then(data => { return data['items']} )
 }
 
-async function get_box_id_of_asset(id) {
-    if (id !== null) {
-        let url = EXPLORER_API_URL + "api/v1/tokens/" + id;
-        return await fetch(url)
-            .then(res => res.json())
-            .then(data => { return data['boxId'] });
-    } else {
-        return null;
-    }
+async function get_last_transaction(data) {
+    return data[data.length - 1];
 }
 
-async function get_box_id_address(boxId) {
-    if (boxId !== null) {
-        let url = EXPLORER_API_URL + "api/v1/boxes/" + boxId;
-        return await fetch(url)
-            .then(res => res.json())
-            .then(data => { return data['address'] });
-    } else {
-        return null;
-    }
-}
-
-async function check_if_transaction_mints_token() {
-    return true;
+async function get_box_id_from_transaction_data(data) {
+    return data['boxId'];
 }
 
 export async function resolve_ergoname(name) {
-    let transactionArray = await create_complete_transaction_array();
-    transactionArray = await update_transaction_array(transactionArray);
-    let id = await get_asset_id(transactionArray, name);
-    let boxId = await get_box_id_of_asset(id);
-    let address = await get_box_id_address(boxId);
-    return address;
+    let tokenData = await get_token_data(name);
+    let tokenArray = await convert_token_data_to_token(tokenData);
+    let tokenId = await get_asset_minted_at_address(tokenArray);
+    let tokenTransactions = await get_token_transaction_data(tokenId);
+    let tokenLastTransaction = await get_last_transaction(tokenTransactions);
+    let tokenCurrentBoxId = await get_box_id_from_transaction_data(tokenLastTransaction);
+    return await get_box_address(tokenCurrentBoxId);
 }
 
 let start_time = new Date().getTime();
@@ -139,4 +90,5 @@ let start_time = new Date().getTime();
 let address = await resolve_ergoname("test mint v0.1.1");
 console.log(address);
 
-console.log("\nProgram takes " + (((new Date().getTime()) - start_time) / 1000) + " seconds to run");
+console.log("\nExplorer calls: " + API_CALLS);
+console.log("Program time: " + (((new Date().getTime()) - start_time) / 1000));
