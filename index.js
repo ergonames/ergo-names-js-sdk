@@ -17,12 +17,28 @@ class Token {
     }
 }
 
-async function get_token_data(tokenName) {
-    let url = EXPLORER_API_URL + "api/v1/tokens/search?query=" + tokenName;
+async function get_token_data(tokenName, limit, offset) {
+    let url = EXPLORER_API_URL + "api/v1/tokens/search?query=" + tokenName + "&limit=" + limit + "&offset=" + offset;
+    console.log(url);
     API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
-        .then(data => { return data['items']} )
+        .then(data => { return data} )
+}
+
+async function create_token_data(tokenName) {
+    let totalRaw = await get_token_data(tokenName, 1, 0);
+    let total = totalRaw['total'];
+    let neededCalls = Math.floor(total / 500) + 1;
+    let tokenData = [];
+    let offset = 0;
+    for (let i=0; i<neededCalls; i++) {
+        let dataRaw = await get_token_data(tokenName, 500, offset);
+        let data = dataRaw['items']
+        tokenData.push(data);
+        offset += 500;
+    }
+    return tokenData[0];
 }
 
 async function convert_token_data_to_token(data) {
@@ -36,6 +52,7 @@ async function convert_token_data_to_token(data) {
 
 async function get_box_address(boxId) {
     let url = EXPLORER_API_URL + "api/v1/boxes/" + boxId;
+    console.log(url);
     API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
@@ -61,6 +78,7 @@ async function get_asset_minted_at_address(tokenArray) {
 
 async function get_token_transaction_data(tokenId) {
     let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId;
+    console.log(url);
     API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
@@ -75,8 +93,21 @@ async function get_box_id_from_transaction_data(data) {
     return data['boxId'];
 }
 
+async function reformat_name_search(name) {
+    let newName = "";
+    for (let i=0; i<name.length; i++) {
+        if (name[i] == " ") {
+            newName += "%20";
+        } else {
+            newName += name[i];
+        }
+    }
+    return newName;
+}
+
 export async function resolve_ergoname(name) {
-    let tokenData = await get_token_data(name);
+    name = await reformat_name_search(name);
+    let tokenData = await create_token_data(name);
     let tokenArray = await convert_token_data_to_token(tokenData);
     let tokenId = await get_asset_minted_at_address(tokenArray);
     let tokenTransactions = await get_token_transaction_data(tokenId);
@@ -88,7 +119,8 @@ export async function resolve_ergoname(name) {
 let start_time = new Date().getTime();
 
 let address = await resolve_ergoname("test mint v0.1.1");
-console.log(address);
+console.log("\nResolved Address: " + address);
+console.log("Mint Address: " + MINT_ADDRESS);
 
 console.log("\nExplorer calls: " + API_CALLS);
 console.log("Program time: " + (((new Date().getTime()) - start_time) / 1000));
