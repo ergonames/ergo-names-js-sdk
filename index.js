@@ -77,12 +77,22 @@ async function get_asset_minted_at_address(tokenArray) {
 }
 
 async function get_token_transaction_data(tokenId) {
-    let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId;
+    let total = await get_max_transactions_for_token(tokenId);
+    let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1&offset=" + (total-1);
     console.log(url);
     API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data['items']} )
+}
+
+async function get_max_transactions_for_token(tokenId) {
+    let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1";
+    console.log(url);
+    API_CALLS++;
+    return await fetch(url)
+        .then(res => res.json())
+        .then(data => { return data['total']} )
 }
 
 async function get_last_transaction(data) {
