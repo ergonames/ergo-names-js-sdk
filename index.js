@@ -28,13 +28,17 @@ async function create_token_data(tokenName) {
     let neededCalls = Math.floor(total / 500) + 1;
     let tokenData = [];
     let offset = 0;
-    for (let i=0; i<neededCalls; i++) {
-        let dataRaw = await get_token_data(tokenName, 500, offset);
-        let data = dataRaw['items']
-        tokenData.push(data);
-        offset += 500;
+    if (total > 0) {
+        for (let i=0; i<neededCalls; i++) {
+            let dataRaw = await get_token_data(tokenName, 500, offset);
+            let data = dataRaw['items']
+            tokenData.push(data);
+            offset += 500;
+        }
+        return tokenData[0];
+    } else {
+        return null;
     }
-    return tokenData[0];
 }
 
 async function convert_token_data_to_token(data) {
@@ -108,10 +112,15 @@ async function reformat_name_search(name) {
 export async function resolve_ergoname(name) {
     name = await reformat_name_search(name);
     let tokenData = await create_token_data(name);
-    let tokenArray = await convert_token_data_to_token(tokenData);
-    let tokenId = await get_asset_minted_at_address(tokenArray);
-    let tokenTransactions = await get_token_transaction_data(tokenId);
-    let tokenLastTransaction = await get_last_transaction(tokenTransactions);
-    let tokenCurrentBoxId = await get_box_id_from_transaction_data(tokenLastTransaction);
-    return await get_box_address(tokenCurrentBoxId);
+    if (tokenData != null) {
+        let tokenArray = await convert_token_data_to_token(tokenData);
+        let tokenId = await get_asset_minted_at_address(tokenArray);
+        let tokenTransactions = await get_token_transaction_data(tokenId);
+        let tokenLastTransaction = await get_last_transaction(tokenTransactions);
+        let tokenCurrentBoxId = await get_box_id_from_transaction_data(tokenLastTransaction);
+        return await get_box_address(tokenCurrentBoxId);
+    }
+    else {
+        return null;
+    }
 }
