@@ -3,8 +3,6 @@ import fetch from "node-fetch";
 const EXPLORER_API_URL = "https://api-testnet.ergoplatform.com/";
 const MINT_ADDRESS = "3WwKzFjZGrtKAV7qSCoJsZK9iJhLLrUa3uwd4yw52bVtDVv6j5TL";
 
-let API_CALLS = 0;
-
 class Token {
     constructor(id, boxId, emmissionAmount, name, description, type, decimals) {
         this.id = id;
@@ -19,8 +17,6 @@ class Token {
 
 async function get_token_data(tokenName, limit, offset) {
     let url = EXPLORER_API_URL + "api/v1/tokens/search?query=" + tokenName + "&limit=" + limit + "&offset=" + offset;
-    console.log(url);
-    API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data} )
@@ -52,8 +48,6 @@ async function convert_token_data_to_token(data) {
 
 async function get_box_address(boxId) {
     let url = EXPLORER_API_URL + "api/v1/boxes/" + boxId;
-    console.log(url);
-    API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data['address']} )
@@ -79,8 +73,6 @@ async function get_asset_minted_at_address(tokenArray) {
 async function get_token_transaction_data(tokenId) {
     let total = await get_max_transactions_for_token(tokenId);
     let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1&offset=" + (total-1);
-    console.log(url);
-    API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data['items']} )
@@ -88,8 +80,6 @@ async function get_token_transaction_data(tokenId) {
 
 async function get_max_transactions_for_token(tokenId) {
     let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1";
-    console.log(url);
-    API_CALLS++;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data['total']} )
@@ -125,12 +115,3 @@ export async function resolve_ergoname(name) {
     let tokenCurrentBoxId = await get_box_id_from_transaction_data(tokenLastTransaction);
     return await get_box_address(tokenCurrentBoxId);
 }
-
-let start_time = new Date().getTime();
-
-let address = await resolve_ergoname("test mint v0.1.1");
-console.log("\nResolved Address: " + address);
-console.log("Mint Address: " + MINT_ADDRESS);
-
-console.log("\nExplorer calls: " + API_CALLS);
-console.log("Program time: " + (((new Date().getTime()) - start_time) / 1000));
