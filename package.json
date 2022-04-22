@@ -1,13 +1,18 @@
 {
-  "name": "ergo-names-js",
+  "name": "ergonames",
   "version": "0.1.0",
-  "description": "A Javascript library for resolving Ergo Names owner addresses.",
+  "description": "A SDK for resolving ErgoNames.",
   "main": "index.js",
+  "homepage": "https://ergonames.com/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ergonames/ergo-names-js-sdk"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Ergo Names",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "node-fetch": "^3.2.0"
   },

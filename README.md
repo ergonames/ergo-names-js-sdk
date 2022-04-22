@@ -1,3 +1,10 @@
 # Ergo Names JavaScript SDK
 
-converted to importable library coming soon
+### Documentation
+
+To get an owner address
+
+```js
+let address = await resolve_ergoname("~balb");
+console.log(address);
+```
