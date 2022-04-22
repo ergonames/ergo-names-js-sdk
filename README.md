@@ -1,8 +1,6 @@
 # Ergo Names JavaScript SDK
 
-### Documentation
-
-To get an owner address
+### Example
 
 ```js
 let address = await resolve_ergoname("~balb");
