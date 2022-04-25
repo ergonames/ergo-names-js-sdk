@@ -97,20 +97,7 @@ async function get_box_id_from_transaction_data(data) {
     return data['boxId'];
 }
 
-async function reformat_name_search(name) {
-    let newName = "";
-    for (let i=0; i<name.length; i++) {
-        if (name[i] == " ") {
-            newName += "%20";
-        } else {
-            newName += name[i];
-        }
-    }
-    return newName;
-}
-
 export async function resolve_ergoname(name) {
-    name = await reformat_name_search(name);
     let tokenData = await create_token_data(name);
     if (tokenData != null) {
         let tokenArray = await convert_token_data_to_token(tokenData);
