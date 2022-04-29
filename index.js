@@ -137,6 +137,7 @@ async function get_box_id_from_transaction_data(data) {
 }
 
 export async function resolve_ergoname(name) {
+    name = reformat_name(name);
     let tokenData = await create_token_data(name);
     if (tokenData != null) {
         let tokenArray = await convert_token_data_to_token(tokenData);
@@ -152,6 +153,7 @@ export async function resolve_ergoname(name) {
 }
 
 export async function check_already_registered(name) {
+    name = reformat_name(name);
     let address = await resolve_ergoname(name);
     if (address != null) {
         return true;
@@ -166,3 +168,41 @@ export async function reverse_search(address) {
     let owned = await check_correct_ownership(tokenArray, address);
     return owned;
 }
+
+export async function get_total_amount_owned(address) {
+    let owned = await reverse_search(address);
+    return owned.length;
+}
+
+export async function check_name_price(name) {
+    name = reformat_name(name);
+    return name;
+}
+
+export function reformat_name(name) {
+    return name.toLowerCase();
+}
+
+export function check_name_valid(name) {
+    for (let i=0; i<name.length; i++) {
+        let charCode = name.charCodeAt(i);
+        if (charCode <= 44) {
+            return false;
+        } else if (charCode == 47) {
+            return false;
+        } else if (charCode >= 58 && charCode <= 94) {
+            return false;
+        } else if (charCode == 96) {
+            return false;
+        } else if (charCode >= 123 && charCode <= 125) {
+            return false;
+        } else if (charCode >= 127) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+let nodeAddr1 = "3WwKzFjZGrtKAV7qSCoJsZK9iJhLLrUa3uwd4yw52bVtDVv6j5TL";
+let name = "~balb";
