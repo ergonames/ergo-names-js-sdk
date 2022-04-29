@@ -132,8 +132,38 @@ async function get_last_transaction(data) {
     return data[data.length - 1];
 }
 
+async function get_first_transaction(data) {
+    return data[0];
+}
+
+async function get_settlement_height_from_box_data(data) {
+    return data["settlementHeight"];
+}
+
+async function get_timestmap_from_block_data(data) {
+    return data["block"]["header"]["timestamp"];
+}
+
 async function get_box_id_from_transaction_data(data) {
     return data['boxId'];
+}
+
+async function get_block_id_from_box_data(data) {
+    return data["blockId"];
+}
+
+async function get_block_by_block_height(height) {
+    let url = EXPLORER_API_URL + "api/v1/blocks/" + height;
+    return await fetch(url)
+        .then(res => res.json())
+        .then(data => { return data })
+}
+
+async function get_box_by_id(boxId) {
+    let url = EXPLORER_API_URL + "api/v1/boxes/" + boxId;
+    return await fetch(url)
+        .then(res => res.json())
+        .then(data => { return data }) 
 }
 
 export async function resolve_ergoname(name) {
@@ -179,6 +209,61 @@ export async function check_name_price(name) {
     return name;
 }
 
+export async function get_block_id_registered(name) {
+    name = reformat_name(name);
+    let tokenData = await create_token_data(name);
+    if (tokenData != null) {
+        let tokenArray = await convert_token_data_to_token(tokenData);
+        let tokenId = await get_asset_minted_at_address(tokenArray);
+        let tokenTransactions = await get_token_transaction_data(tokenId);
+        let tokenFirstTransactions = await get_first_transaction(tokenTransactions);
+        let tokenMintBoxId = await get_box_id_from_transaction_data(tokenFirstTransactions);
+        let tokenMintBox = await get_box_by_id(tokenMintBoxId);
+        let blockId = await get_block_id_from_box_data(tokenMintBox);
+        return blockId;
+    }
+    return null;
+}
+
+export async function get_block_registered(name) {
+    name = reformat_name(name);
+    let tokenData = await create_token_data(name);
+    if (tokenData != null) {
+        let tokenArray = await convert_token_data_to_token(tokenData);
+        let tokenId = await get_asset_minted_at_address(tokenArray);
+        let tokenTransactions = await get_token_transaction_data(tokenId);
+        let tokenFirstTransactions = await get_first_transaction(tokenTransactions);
+        let tokenMintBoxId = await get_box_id_from_transaction_data(tokenFirstTransactions);
+        let tokenMintBox = await get_box_by_id(tokenMintBoxId);
+        let height = await get_settlement_height_from_box_data(tokenMintBox);
+        return height;
+    }
+    return null;
+}
+
+export async function get_timestamp_registered(name) {
+    name = reformat_name(name);
+    let blockRegistered = await get_block_id_registered(name);
+    if (blockRegistered != null) {
+        let blockData = await get_block_by_block_height(blockRegistered);
+        let timestamp = await get_timestmap_from_block_data(blockData);
+        return timestamp;
+    }
+    return null;
+}
+
+export async function get_date_registered(name) {
+    name = reformat_name(name);
+    let blockRegistered = await get_block_id_registered(name);
+    if (blockRegistered != null) {
+        let blockData = await get_block_by_block_height(blockRegistered);
+        let timestamp = await get_timestmap_from_block_data(blockData);
+        let date = new Date(timestamp);
+        return date;
+    }
+    return null;
+}
+
 export function reformat_name(name) {
     return name.toLowerCase();
 }
@@ -202,7 +287,3 @@ export function check_name_valid(name) {
     }
     return true;
 }
-
-
-let nodeAddr1 = "3WwKzFjZGrtKAV7qSCoJsZK9iJhLLrUa3uwd4yw52bVtDVv6j5TL";
-let name = "~balb";
