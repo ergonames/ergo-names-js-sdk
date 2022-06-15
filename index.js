@@ -11,8 +11,8 @@ class Token {
     }
 }
 
-async function get_address_data(address) {
-    let url = EXPLORER_API_URL + "api/v1/addresses/" + address + "/balance/confirmed";
+async function get_address_data(address, explorerUrl = EXPLORER_API_URL) {
+    let url = explorerUrl + "api/v1/addresses/" + address + "/balance/confirmed";
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data })
@@ -54,8 +54,8 @@ async function check_correct_ownership(tokenArray, address) {
     return ownedErgoNames;
 }
 
-async function get_token_data(tokenName, limit, offset) {
-    let url = EXPLORER_API_URL + "api/v1/tokens/search?query=" + tokenName + "&limit=" + limit + "&offset=" + offset;
+async function get_token_data(tokenName, limit, offset, explorerUrl = EXPLORER_API_URL) {
+    let url = explorerUrl + "api/v1/tokens/search?query=" + tokenName + "&limit=" + limit + "&offset=" + offset;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data} )
@@ -89,8 +89,8 @@ async function convert_token_data_to_token(data) {
     return tokenArray;
 }
 
-async function get_box_address(boxId) {
-    let url = EXPLORER_API_URL + "api/v1/boxes/" + boxId;
+async function get_box_address(boxId, explorerUrl = EXPLORER_API_URL) {
+    let url = explorerUrl + "api/v1/boxes/" + boxId;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data['address']} )
@@ -113,16 +113,16 @@ async function get_asset_minted_at_address(tokenArray) {
     return null;
 }
 
-async function get_token_transaction_data(tokenId) {
+async function get_token_transaction_data(tokenId, explorerUrl = EXPLORER_API_URL) {
     let total = await get_max_transactions_for_token(tokenId);
-    let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1&offset=" + (total-1);
+    let url = explorerUrl + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1&offset=" + (total-1);
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data['items']} )
 }
 
-async function get_max_transactions_for_token(tokenId) {
-    let url = EXPLORER_API_URL + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1";
+async function get_max_transactions_for_token(tokenId, explorerUrl = EXPLORER_API_URL) {
+    let url = explorerUrl + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1";
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data['total']} )
@@ -152,15 +152,15 @@ async function get_block_id_from_box_data(data) {
     return data["blockId"];
 }
 
-async function get_block_by_block_height(height) {
-    let url = EXPLORER_API_URL + "api/v1/blocks/" + height;
+async function get_block_by_block_height(height, explorerUrl = EXPLORER_API_URL) {
+    let url = explorerUrl + "api/v1/blocks/" + height;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data })
 }
 
-async function get_box_by_id(boxId) {
-    let url = EXPLORER_API_URL + "api/v1/boxes/" + boxId;
+async function get_box_by_id(boxId, explorerUrl = EXPLORER_API_URL) {
+    let url = explorerUrl + "api/v1/boxes/" + boxId;
     return await fetch(url)
         .then(res => res.json())
         .then(data => { return data }) 
@@ -287,3 +287,5 @@ export function check_name_valid(name) {
     }
     return true;
 }
+
+console.log(await resolve_ergoname("~balb"));
