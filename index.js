@@ -287,5 +287,3 @@ export function check_name_valid(name) {
     }
     return true;
 }
-
-console.log(await resolve_ergoname("~balb"));
