@@ -1,274 +1,30 @@
 import fetch from "node-fetch";
 
 const EXPLORER_API_URL = "https://api-testnet.ergoplatform.com/";
-const MINT_ADDRESS = "3WwKzFjZGrtKAV7qSCoJsZK9iJhLLrUa3uwd4yw52bVtDVv6j5TL";
+const MINT_ADDRESS = "3WycHxEz8ExeEWpUBwvu1FKrpY8YQCiH1S9PfnAvBX1K73BXBXZa";
 
-class Token {
-    constructor(id, boxId, name) {
-        this.id = id;
-        this.boxId = boxId;
-        this.name = name;
-    }
-}
-
-async function get_address_data(address, explorerUrl = EXPLORER_API_URL) {
-    let url = explorerUrl + "api/v1/addresses/" + address + "/balance/confirmed";
-    return await fetch(url)
-        .then(res => res.json())
-        .then(data => { return data })
-}
-
-async function create_address_data(address) {
-    let tokensRaw = await get_address_data(address);
-    let tokens = tokensRaw["tokens"];
-    return tokens;
-}
-
-async function create_address_tokens_array(tokenData) {
-    let tokenArray = []
-    for (let i=0; i<Object.keys(tokenData).length; i++) {
-        let tk = new Token(tokenData[i]["tokenId"], "none", tokenData[i]["name"]);
-        tokenArray.push(tk);
-    }
-    return tokenArray;
-}
-
-async function remove_wrong_names_tokens(tokenArray) {
-    let newArr = []
-    for (let i=0; i<tokenArray.length; i++) {
-        if (tokenArray[i].name[0] ==  "~") {
-            newArr.push(tokenArray[i]);
-        }
-    }
-    return newArr;
-}
-
-async function check_correct_ownership(tokenArray, address) {
-    let ownedErgoNames = [];
-    for (let i=0; i<tokenArray.length; i++) {
-        let ownerAddress = await resolve_ergoname(tokenArray[i].name);
-        if (ownerAddress == MINT_ADDRESS) {
-            ownedErgoNames.push(tokenArray[i]);
-        }
-    }
-    return ownedErgoNames;
-}
-
-async function get_token_data(tokenName, limit, offset, explorerUrl = EXPLORER_API_URL) {
-    let url = explorerUrl + "api/v1/tokens/search?query=" + tokenName + "&limit=" + limit + "&offset=" + offset;
-    return await fetch(url)
-        .then(res => res.json())
-        .then(data => { return data} )
-}
-
-async function create_token_data(tokenName) {
-    let totalRaw = await get_token_data(tokenName, 1, 0);
-    let total = totalRaw['total'];
-    let neededCalls = Math.floor(total / 500) + 1;
-    let tokenData = [];
-    let offset = 0;
-    if (total > 0) {
-        for (let i=0; i<neededCalls; i++) {
-            let dataRaw = await get_token_data(tokenName, 500, offset);
-            let data = dataRaw['items']
-            tokenData.push(data);
-            offset += 500;
-        }
-        return tokenData[0];
-    } else {
+export async function resolve_ergoname(name, explorer_url = EXPLORER_API_URL) {
+    let token_data = await create_token_data(name, explorer_url);
+    if (token_data == null) {
         return null;
     }
+    let token_id = await get_asset_minted_at_address(token_data, explorer_url);
+    let token_transactions = await get_token_transaction_data(token_id, explorer_url);
+    let token_last_transaction = await get_last_transaction_for_token(token_transactions);
+    let token_current_box_id = await get_box_id_from_token_data(token_last_transaction);
+    let address = await get_box_address(token_current_box_id, explorer_url);
+    return address;
 }
 
-async function convert_token_data_to_token(data) {
-    let tokenArray = []
-    for (let i=0; i<Object.keys(data).length; i++) {
-        let tk = new Token(data[i]['id'], data[i]['boxId'], data[i]['name']);
-        tokenArray.push(tk);
+export async function check_already_registered(name, explorer_url = EXPLORER_API_URL) {
+    let address = await resolve_ergoname(name, explorer_url);
+    if (address == null) {
+        return false;
     }
-    return tokenArray;
+    return true;
 }
 
-async function get_box_address(boxId, explorerUrl = EXPLORER_API_URL) {
-    let url = explorerUrl + "api/v1/boxes/" + boxId;
-    return await fetch(url)
-        .then(res => res.json())
-        .then(data => { return data['address']} )
-}
-
-async function check_box_address(address) {
-    if (address == MINT_ADDRESS) {
-        return true;
-    }
-    return false;
-}
-
-async function get_asset_minted_at_address(tokenArray) {
-    for (let i=0; i<tokenArray.length; i++) {
-        let address = await get_box_address(tokenArray[i].boxId);
-        if (await check_box_address(address)) {
-            return tokenArray[i].id;
-        }
-    }
-    return null;
-}
-
-async function get_token_transaction_data(tokenId, explorerUrl = EXPLORER_API_URL) {
-    let total = await get_max_transactions_for_token(tokenId);
-    let url = explorerUrl + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1&offset=" + (total-1);
-    return await fetch(url)
-        .then(res => res.json())
-        .then(data => { return data['items']} )
-}
-
-async function get_max_transactions_for_token(tokenId, explorerUrl = EXPLORER_API_URL) {
-    let url = explorerUrl + "api/v1/assets/search/byTokenId?query=" + tokenId + "&limit=1";
-    return await fetch(url)
-        .then(res => res.json())
-        .then(data => { return data['total']} )
-}
-
-async function get_last_transaction(data) {
-    return data[data.length - 1];
-}
-
-async function get_first_transaction(data) {
-    return data[0];
-}
-
-async function get_settlement_height_from_box_data(data) {
-    return data["settlementHeight"];
-}
-
-async function get_timestmap_from_block_data(data) {
-    return data["block"]["header"]["timestamp"];
-}
-
-async function get_box_id_from_transaction_data(data) {
-    return data['boxId'];
-}
-
-async function get_block_id_from_box_data(data) {
-    return data["blockId"];
-}
-
-async function get_block_by_block_height(height, explorerUrl = EXPLORER_API_URL) {
-    let url = explorerUrl + "api/v1/blocks/" + height;
-    return await fetch(url)
-        .then(res => res.json())
-        .then(data => { return data })
-}
-
-async function get_box_by_id(boxId, explorerUrl = EXPLORER_API_URL) {
-    let url = explorerUrl + "api/v1/boxes/" + boxId;
-    return await fetch(url)
-        .then(res => res.json())
-        .then(data => { return data }) 
-}
-
-export async function resolve_ergoname(name) {
-    name = reformat_name(name);
-    let tokenData = await create_token_data(name);
-    if (tokenData != null) {
-        let tokenArray = await convert_token_data_to_token(tokenData);
-        let tokenId = await get_asset_minted_at_address(tokenArray);
-        let tokenTransactions = await get_token_transaction_data(tokenId);
-        let tokenLastTransaction = await get_last_transaction(tokenTransactions);
-        let tokenCurrentBoxId = await get_box_id_from_transaction_data(tokenLastTransaction);
-        return await get_box_address(tokenCurrentBoxId);
-    }
-    else {
-        return null;
-    }
-}
-
-export async function check_already_registered(name) {
-    name = reformat_name(name);
-    let address = await resolve_ergoname(name);
-    if (address != null) {
-        return true;
-    }
-    return false;
-}
-
-export async function reverse_search(address) {
-    let tokenData = await create_address_data(address);
-    let tokenArray = await create_address_tokens_array(tokenData);
-    tokenArray = await remove_wrong_names_tokens(tokenArray);
-    let owned = await check_correct_ownership(tokenArray, address);
-    return owned;
-}
-
-export async function get_total_amount_owned(address) {
-    let owned = await reverse_search(address);
-    return owned.length;
-}
-
-export async function check_name_price(name) {
-    name = reformat_name(name);
-    return name;
-}
-
-export async function get_block_id_registered(name) {
-    name = reformat_name(name);
-    let tokenData = await create_token_data(name);
-    if (tokenData != null) {
-        let tokenArray = await convert_token_data_to_token(tokenData);
-        let tokenId = await get_asset_minted_at_address(tokenArray);
-        let tokenTransactions = await get_token_transaction_data(tokenId);
-        let tokenFirstTransactions = await get_first_transaction(tokenTransactions);
-        let tokenMintBoxId = await get_box_id_from_transaction_data(tokenFirstTransactions);
-        let tokenMintBox = await get_box_by_id(tokenMintBoxId);
-        let blockId = await get_block_id_from_box_data(tokenMintBox);
-        return blockId;
-    }
-    return null;
-}
-
-export async function get_block_registered(name) {
-    name = reformat_name(name);
-    let tokenData = await create_token_data(name);
-    if (tokenData != null) {
-        let tokenArray = await convert_token_data_to_token(tokenData);
-        let tokenId = await get_asset_minted_at_address(tokenArray);
-        let tokenTransactions = await get_token_transaction_data(tokenId);
-        let tokenFirstTransactions = await get_first_transaction(tokenTransactions);
-        let tokenMintBoxId = await get_box_id_from_transaction_data(tokenFirstTransactions);
-        let tokenMintBox = await get_box_by_id(tokenMintBoxId);
-        let height = await get_settlement_height_from_box_data(tokenMintBox);
-        return height;
-    }
-    return null;
-}
-
-export async function get_timestamp_registered(name) {
-    name = reformat_name(name);
-    let blockRegistered = await get_block_id_registered(name);
-    if (blockRegistered != null) {
-        let blockData = await get_block_by_block_height(blockRegistered);
-        let timestamp = await get_timestmap_from_block_data(blockData);
-        return timestamp;
-    }
-    return null;
-}
-
-export async function get_date_registered(name) {
-    name = reformat_name(name);
-    let blockRegistered = await get_block_id_registered(name);
-    if (blockRegistered != null) {
-        let blockData = await get_block_by_block_height(blockRegistered);
-        let timestamp = await get_timestmap_from_block_data(blockData);
-        let date = new Date(timestamp);
-        return date;
-    }
-    return null;
-}
-
-export function reformat_name(name) {
-    return name.toLowerCase();
-}
-
-export function check_name_valid(name) {
+export async function check_name_valid(name) {
     for (let i=0; i<name.length; i++) {
         let charCode = name.charCodeAt(i);
         if (charCode <= 44) {
@@ -286,4 +42,192 @@ export function check_name_valid(name) {
         }
     }
     return true;
+}
+
+export async function get_block_id_registered(name, explorer_url = EXPLORER_API_URL) {
+    let token_data = await create_token_data(name, explorer_url);
+    if (token_data == null) {
+        return null;
+    }
+    let token_id = await get_asset_minted_at_address(token_data, explorer_url);
+    let token_transactions = await get_token_transaction_data(token_id, explorer_url);
+    let token_first_transaction = await get_first_transaction_for_token(token_transactions);
+    let block_id = await get_block_id_from_transaction(token_first_transaction);
+    return block_id;
+}
+
+export async function get_block_registered(name, explorer_url = EXPLORER_API_URL) {
+    let block_id = await get_block_id_registered(name, explorer_url);
+    if (block_id == null) {
+        return null;
+    }
+    let block_data = await get_block_by_id(block_id, explorer_url);
+    let height = await get_height_from_block(block_data);
+    return height;
+}
+
+export async function get_timestamp_registered(name, explorer_url = EXPLORER_API_URL) {
+    let block_id = await get_block_id_registered(name, explorer_url);
+    if (block_id == null) {
+        return null;
+    }
+    let block_data = await get_block_by_id(block_id, explorer_url);
+    let timestamp = await get_timestamp_from_block(block_data);
+    return timestamp;
+}
+
+export async function get_date_registered(name, explorer_url = EXPLORER_API_URL) {
+    let timestamp = await get_timestamp_registered(name, explorer_url);
+    if (timestamp == null) {
+        return null;
+    }
+    let date = new Date(timestamp);
+    const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+    date = date.toLocaleString('en-US', options);
+    return date;
+}
+
+export async function reverse_search(address, explorer_url = EXPLORER_API_URL) {
+    let token_data = await get_address_tokens(address, explorer_url);
+    if (token_data.length == 0) {
+        return null;
+    }
+    let valid_tokens = await remove_invalid_tokens(token_data);
+    let owned_tokens = await check_correct_ownership(valid_tokens);
+    return owned_tokens;
+}
+
+export async function get_total_amount_owned(address, explorer_url = EXPLORER_API_URL) {
+    let owned = await reverse_search(address, explorer_url);
+    if (owned == null) {
+        return null;
+    }
+    return owned.length;
+}
+
+async function create_token_data(name, explorer_url = EXPLORER_API_URL) {
+    let total_raw = await get_token_data(name, 1, 0, explorer_url);
+    let total = total_raw.total;
+    let needed_calls = Math.floor(total / 500) + 1;
+    let offset = 0;
+    let token_data = [];
+    if (total > 0) {
+        for (let i = 0; i < needed_calls; i++) {
+            let data = await get_token_data(name, 500, offset, explorer_url);
+            token_data = token_data.concat(data.items);
+            offset += 500;
+        }
+        return token_data;
+    }
+    return null;
+}
+
+async function get_token_data(name, limit, offset, explorer_url = EXPLORER_API_URL) {
+    let url = `${explorer_url}/api/v1/tokens/search?query=${name}&limit=${limit}&offset=${offset}`;
+    let response = await fetch(url);
+    let json = await response.json();
+    return json;
+}
+
+async function get_asset_minted_at_address(token_data, explorer_url = EXPLORER_API_URL) {
+    for (let i = 0; i < token_data.length; i++) {
+        let token = token_data[i];
+        let token_id = token.id;
+        let address = await get_box_address(token_id, explorer_url);
+        if (address == MINT_ADDRESS) {
+            return token_id;
+        };
+    };
+    return null;
+}
+
+async function get_box_address(box_id, explorer_url = EXPLORER_API_URL) {
+    let box_data = await get_box_by_id(box_id, explorer_url);
+    let address = box_data.address;
+    return address;
+}
+
+async function get_box_by_id(box_id, explorer_url = EXPLORER_API_URL) {
+    let url = `${explorer_url}/api/v1/boxes/${box_id}`;
+    let response = await fetch(url);
+    let json = await response.json();
+    return json;
+}
+
+async function get_token_transaction_data(token_id, explorer_url = EXPLORER_API_URL) {
+    let url = `${explorer_url}/api/v1/assets/search/byTokenId?query=${token_id}`;
+    let response = await fetch(url);
+    let json = await response.json();
+    return json.items;
+}
+
+async function get_last_transaction_for_token(token_transactions) {
+    return token_transactions[token_transactions.length - 1];
+}
+
+async function get_first_transaction_for_token(token_transactions) {
+    return token_transactions[0];
+}
+
+async function get_box_id_from_token_data(data) {
+    return data.boxId;
+}
+
+async function get_block_id_from_transaction(data) {
+    return data.headerId;
+}
+
+async function get_block_by_id(block_id, explorer_url = EXPLORER_API_URL) {
+    let url = `${explorer_url}/api/v1/blocks/${block_id}`;
+    let response = await fetch(url);
+    let json = await response.json();
+    return json;
+}
+
+async function get_height_from_block(block_data) {
+    return block_data.block.header.height;
+}
+
+async function get_timestamp_from_block(block_data) {
+    return block_data.block.header.timestamp;
+}
+
+async function get_address_tokens(address, explorer_url = EXPLORER_API_URL) {
+    let balance = await get_address_confirmed_balance(address, explorer_url);
+    let tokens = balance.tokens;
+    return tokens;
+}
+
+async function get_address_confirmed_balance(address, explorer_url = EXPLORER_API_URL) {
+    let url = `${explorer_url}/api/v1/addresses/${address}/balance/confirmed`;
+    let response = await fetch(url);
+    let json = await response.json();
+    return json;
+}
+
+async function remove_invalid_tokens(token_data) {
+    for (let i = 0; i < token_data.length; i++) {
+        let token = token_data[i];
+        let token_name = token.name;
+        if (await check_name_valid(token_name) == false) {
+            token_data.splice(i, 1);
+            i--;
+        }
+    }
+    return token_data;
+}
+
+async function check_correct_ownership(token_data) {
+    for (let i = 0; i < token_data.length; i++) {
+        let token = token_data[i];
+        let token_id = token.tokenId;
+        let token_transactions = await get_token_transaction_data(token_id);
+        let first_transaction = await get_first_transaction_for_token(token_transactions);
+        let box_id = await get_box_id_from_token_data(first_transaction);
+        if (await get_box_address(box_id) != MINT_ADDRESS) {
+            token_data.splice(i, 1);
+            i--;
+        }
+    }
+    return token_data;
 }
