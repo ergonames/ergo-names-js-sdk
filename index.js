@@ -162,11 +162,11 @@ async function get_token_transaction_data(token_id, explorer_url = EXPLORER_API_
 }
 
 async function get_last_transaction_for_token(token_transactions) {
-    return token_transactions[token_transactions.length - 1];
+    return token_transactions[0];
 }
 
 async function get_first_transaction_for_token(token_transactions) {
-    return token_transactions[0];
+    return token_transactions[token_transactions.length-1];
 }
 
 async function get_box_id_from_token_data(data) {
