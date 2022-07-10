@@ -162,11 +162,31 @@ async function get_token_transaction_data(token_id, explorer_url = EXPLORER_API_
 }
 
 async function get_last_transaction_for_token(token_transactions) {
-    return token_transactions[0];
+    let latest_transaction = null;
+    let creation_height = 0;
+    for (let i = 0; i < token_transactions.length; i++) {
+        let box_id = token_transactions[i].boxId;
+        let box_info = await get_box_by_id(box_id);
+        if (box_info.creationHeight > creation_height) {
+            creation_height = box_info.creationHeight;
+            latest_transaction = token_transactions[i];
+        };
+    };
+    return latest_transaction;
 }
 
 async function get_first_transaction_for_token(token_transactions) {
-    return token_transactions[token_transactions.length-1];
+    let latest_transaction = null;
+    let creation_height = null;
+    for (let i = 0; i < token_transactions.length; i++) {
+        let box_id = token_transactions[i].boxId;
+        let box_info = await get_box_by_id(box_id);
+        if ((box_info.creationHeight < creation_height) || (creation_height == null)) {
+            creation_height = box_info.creationHeight;
+            latest_transaction = token_transactions[i];
+        };
+    };
+    return latest_transaction;
 }
 
 async function get_box_id_from_token_data(data) {
