@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 const EXPLORER_API_URL = "https://api-testnet.ergoplatform.com/";
 const MINT_ADDRESS = "3WycHxEz8ExeEWpUBwvu1FKrpY8YQCiH1S9PfnAvBX1K73BXBXZa";
 
-export async function resolve_ergoname(name, explorer_url = EXPLORER_API_URL) {
+export const resolve_ergoname = async (name, explorer_url = EXPLORER_API_URL) => {
     let token_data = await create_token_data(name, explorer_url);
     if (token_data == null) {
         return null;
@@ -16,7 +16,7 @@ export async function resolve_ergoname(name, explorer_url = EXPLORER_API_URL) {
     return address;
 }
 
-export async function check_already_registered(name, explorer_url = EXPLORER_API_URL) {
+export const check_already_registered = async (name, explorer_url = EXPLORER_API_URL) => {
     let address = await resolve_ergoname(name, explorer_url);
     if (address == null) {
         return false;
@@ -24,7 +24,7 @@ export async function check_already_registered(name, explorer_url = EXPLORER_API
     return true;
 }
 
-export async function check_name_valid(name) {
+export const check_name_valid = async (name) => {
     for (let i=0; i<name.length; i++) {
         let charCode = name.charCodeAt(i);
         if (charCode <= 44) {
@@ -44,7 +44,7 @@ export async function check_name_valid(name) {
     return true;
 }
 
-export async function get_block_id_registered(name, explorer_url = EXPLORER_API_URL) {
+export const get_block_id_registered = async (name, explorer_url = EXPLORER_API_URL) => {
     let token_data = await create_token_data(name, explorer_url);
     if (token_data == null) {
         return null;
@@ -56,7 +56,7 @@ export async function get_block_id_registered(name, explorer_url = EXPLORER_API_
     return block_id;
 }
 
-export async function get_block_registered(name, explorer_url = EXPLORER_API_URL) {
+export const get_block_registered = async (name, explorer_url = EXPLORER_API_URL) => {
     let block_id = await get_block_id_registered(name, explorer_url);
     if (block_id == null) {
         return null;
@@ -66,7 +66,7 @@ export async function get_block_registered(name, explorer_url = EXPLORER_API_URL
     return height;
 }
 
-export async function get_timestamp_registered(name, explorer_url = EXPLORER_API_URL) {
+export const get_timestamp_registered = async (name, explorer_url = EXPLORER_API_URL) => {
     let block_id = await get_block_id_registered(name, explorer_url);
     if (block_id == null) {
         return null;
@@ -76,7 +76,7 @@ export async function get_timestamp_registered(name, explorer_url = EXPLORER_API
     return timestamp;
 }
 
-export async function get_date_registered(name, explorer_url = EXPLORER_API_URL) {
+export const get_date_registered = async (name, explorer_url = EXPLORER_API_URL) => {
     let timestamp = await get_timestamp_registered(name, explorer_url);
     if (timestamp == null) {
         return null;
@@ -87,7 +87,7 @@ export async function get_date_registered(name, explorer_url = EXPLORER_API_URL)
     return date;
 }
 
-export async function reverse_search(address, explorer_url = EXPLORER_API_URL) {
+export const reverse_search = async (address, explorer_url = EXPLORER_API_URL) => {
     let token_data = await get_address_tokens(address, explorer_url);
     if (token_data.length == 0) {
         return null;
@@ -97,7 +97,7 @@ export async function reverse_search(address, explorer_url = EXPLORER_API_URL) {
     return owned_tokens;
 }
 
-export async function get_total_amount_owned(address, explorer_url = EXPLORER_API_URL) {
+export const get_total_amount_owned = async (address, explorer_url = EXPLORER_API_URL) => {
     let owned = await reverse_search(address, explorer_url);
     if (owned == null) {
         return null;
